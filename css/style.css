@@ -1,0 +1,63 @@
+*{
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color:rgb(40, 40, 40);
+}
+html{
+  font-size: 62.5%;
+}
+
+#info {
+  position: fixed;
+  top: 48px;
+  left: 5px;
+  color: white;
+  background-color:rgba(255, 255, 255, 0);
+}
+
+#container {
+  width:100%;
+  height: 100%;
+}
+
+#graph {
+  position: absolute;
+  opacity: 0.5;
+  width:20%;
+  height: 80%;
+  left: 0;
+  bottom: 0;
+}
+
+.start { 
+  position: absolute;
+  top: 1rem;
+  width: 15rem;
+  padding: 1rem;
+  color: white;
+  text-align: center;
+  background-color: gray;
+  border: 0.2rem solid white;
+  border-radius: 1rem;
+  font-size:2.2rem; 
+  font-weight: 600;
+  left: 50%; 
+  top: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  box-shadow: 0.2rem 0.2rem rgba(253, 248, 248, 0.2);
+}
+
+.start:hover {
+  color:rgb(204, 191, 191);
+  background-color: rgb(70, 78, 70);
+}
+.start:active {
+  top: 51%;
+  box-shadow: none;
+}
+
+.fill {
+  background-color:gray;
+}
