@@ -60,9 +60,9 @@ function update(positionArray, velocityArray, forceArray, forceArray2, params, d
     let colorpos = 0;
 
     for(let i = 0; i < Natom; ++i) {
-        positionArray[3 * i + 0] += params.delta_t * (velocityArray[3 * i + 0] + forceArray[3 * i + 0] / 2);
-        positionArray[3 * i + 1] += params.delta_t * (velocityArray[3 * i + 1] + forceArray[3 * i + 1] / 2);
-        positionArray[3 * i + 2] += params.delta_t * (velocityArray[3 * i + 2] + forceArray[3 * i + 2] / 2);
+        positionArray[3 * i + 0] += params.delta_t * (velocityArray[3 * i + 0] + params.delta_t * forceArray[3 * i + 0] / 2 / params.m);
+        positionArray[3 * i + 1] += params.delta_t * (velocityArray[3 * i + 1] + params.delta_t * forceArray[3 * i + 1] / 2 / params.m);
+        positionArray[3 * i + 2] += params.delta_t * (velocityArray[3 * i + 2] + params.delta_t * forceArray[3 * i + 2] / 2 / params.m);
         
         if(positionArray[3 * i + 0] <= 0) positionArray[3 * i + 0] += params.a * params.Nx;
         if(positionArray[3 * i + 0] >= params.a * params.Nx) positionArray[3 * i + 0] -= params.a * params.Nx;
@@ -110,9 +110,9 @@ function update(positionArray, velocityArray, forceArray, forceArray2, params, d
     let KE, w;
 
     for(let i = 0; i < Natom; ++i) {
-        velocityArray[3 * i + 0] += params.delta_t * (forceArray[3 * i + 0] + forceArray2[3 * i + 0]) / 2;
-        velocityArray[3 * i + 1] += params.delta_t * (forceArray[3 * i + 1] + forceArray2[3 * i + 1]) / 2;
-        velocityArray[3 * i + 2] += params.delta_t * (forceArray[3 * i + 2] + forceArray2[3 * i + 2]) / 2;
+        velocityArray[3 * i + 0] += params.delta_t * (forceArray[3 * i + 0] + forceArray2[3 * i + 0]) / 2 / params.m;
+        velocityArray[3 * i + 1] += params.delta_t * (forceArray[3 * i + 1] + forceArray2[3 * i + 1]) / 2 / params.m;
+        velocityArray[3 * i + 2] += params.delta_t * (forceArray[3 * i + 2] + forceArray2[3 * i + 2]) / 2 / params.m;
     }
     KE = calcKineticEnergy(velocityArray, forceArray, params);
     w = calcForce(w, positionArray, forceArray2, params);

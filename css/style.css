@@ -21,15 +21,6 @@ html{
   height: 100%;
 }
 
-#graph {
-  position: absolute;
-  opacity: 0.5;
-  width:20%;
-  height: 80%;
-  left: 0;
-  bottom: 0;
-}
-
 .start { 
   position: absolute;
   top: 1rem;

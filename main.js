@@ -12,17 +12,19 @@ import {initPositionPeriodic, initPositionRandom, initVelocity, calcKineticEnerg
 
 var isReady = false;
 var isActive = false;
-//var SCREEN_WIDTH = document.getElementById("container").clientWidth;
-//var SCREEN_HEIGHT = document.getElementById("container").clientHeight;
+
 var SCREEN_WIDTH = window.innerWidth;
 var SCREEN_HEIGHT = window.innerHeight;
-console.log(SCREEN_WIDTH, SCREEN_HEIGHT);
-let rotateCamera, cameraHelper;
-let group;
-let positions, velocities, forcesBefore, forcesAfter, colors, particles, particlePositions, pointCloud;
-let linesMesh;
 
-let camera, renderer, light, scene, container;
+let group;
+
+// particle data
+let velocities, forcesBefore, forcesAfter, particles, particlePositions, pointCloud;
+
+// line data
+let linesMesh, positions, colors;
+
+let camera, renderer, scene, container;
 let config = {
     'rcut': 2,
     'Nx': 10,
@@ -53,6 +55,7 @@ let avgPE = [];
 let avgE = [];
 let stepArray = [0];
 
+// append stats dom
 var stats = new Stats();
 document.body.appendChild(stats.dom);
 
@@ -80,8 +83,6 @@ function initGUI() {
     //     if(value) material.blending = THREE.AdditiveBlending;
     //     else material.blending = null;
     // } );
-    
-    //gui.add(config, '')
 }
 
 async function init() {
@@ -96,6 +97,7 @@ async function init() {
     avgKE = [];
     avgPE = [];
     avgE = [];
+
     container = document.getElementById("container");
 
     //scene
@@ -104,14 +106,10 @@ async function init() {
     
 
     //camera
-    camera = new THREE.PerspectiveCamera(60, SCREEN_WIDTH/ SCREEN_HEIGHT, 0.1, 500);
-
+    camera = new THREE.PerspectiveCamera(50, SCREEN_WIDTH/ SCREEN_HEIGHT, 0.1, 500);
     camera.position.set(config.a * config.Nx * 1.4, config.b * config.Ny * 1.1, config.c * config.Nz * 1.5);    
     camera.lookAt(0, 0, 0);
     scene.add(camera);
-
-    // var axeshelper = new THREE.AxesHelper( 2000 );
-    // scene.add( axeshelper );
 
     //render
     renderer = new THREE.WebGLRenderer({antialias: true});
@@ -120,44 +118,25 @@ async function init() {
     container.appendChild(renderer.domElement);
     renderer.autoClear = false;
 
+    //addEventListner
     window.addEventListener( 'resize', onWindowResize );
 
+    //particle groups
     group = new THREE.Group();
     scene.add( group );
 
+    // boxhelper
     let helperMesh = new THREE.Mesh( new THREE.BoxGeometry( config.a * config.Nx, config.b * config.Ny, config.c * config.Nz ));
     helperMesh.position.set( config.a * config.Nx / 2, config.b * config.Ny / 2, config.c * config.Nz / 2);
     let helper = new THREE.BoxHelper(helperMesh);
-    helper.material.color.setHex( 0x101010 );
-    // helper.material.blending = THREE.AdditiveBlending;
+    helper.material.color.setHex( 0x444444 );
+    helper.material.blending = THREE.AdditiveBlending;
     helper.material.transparent = true;
     group.add(helper);
 
+    // line data
     positions = new Float32Array(Natom * Natom * 3);
     colors = new Float32Array(Natom * Natom * 3);
-
-    const pMaterial = new THREE.PointsMaterial( {
-        color: 0xFFFFFF,
-        size: 6,
-        blending: THREE.AdditiveBlending,
-        transparent: true,
-        sizeAttenuation: false
-    } );
-
-    particles = new THREE.BufferGeometry();
-	particlePositions = new Float32Array(Natom * 3);
-    velocities = new Float32Array(Natom * 3);
-    forcesBefore = new Float32Array(Natom * 3);
-    forcesAfter = new Float32Array(Natom * 3);
-    
-    initPositionPeriodic(particlePositions, config);
-
-    particles.setDrawRange(0, Natom);
-    particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3).setUsage(THREE.DynamicDrawUsage));
-
-    // particle cloud
-    pointCloud = new THREE.Points(particles, pMaterial);
-    group.add(pointCloud);
 
     const geometry = new THREE.BufferGeometry();
 
@@ -178,11 +157,40 @@ async function init() {
 
     linesMesh = new THREE.LineSegments(geometry, material);
     group.add(linesMesh);
+    // particle material
+    const pMaterial = new THREE.PointsMaterial( {
+        color: 0xFFFFFF,
+        size: 5,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        sizeAttenuation: false
+    } );
 
+    
+    // particle init
+    particles = new THREE.BufferGeometry();
+	particlePositions = new Float32Array(Natom * 3);
+    velocities = new Float32Array(Natom * 3);
+    forcesBefore = new Float32Array(Natom * 3);
+    forcesAfter = new Float32Array(Natom * 3);
+    
+    initPositionPeriodic(particlePositions, config);
+
+    particles.setDrawRange(0, Natom);
+    particles.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3).setUsage(THREE.DynamicDrawUsage));
+
+    // particle cloud
+    pointCloud = new THREE.Points(particles, pMaterial);
+    group.add(pointCloud);
+
+    // orbit control
     var controls = new OrbitControls(camera, renderer.domElement);
     controls.target = new THREE.Vector3(config.Nx * config.a / 2, config.Ny * config.b / 2, config.Nz * config.c / 2);
+
+    // init velocity
     initVelocity(velocities, config);
 
+    // physical quantity
     let T = 0;
     let KE = 0;
     let PE = 0;
@@ -200,6 +208,7 @@ async function init() {
     arrKE.push(KE/Natom);
     arrPE.push(PE/Natom);
     arrE.push((KE+PE)/2/Natom);
+
     return 'Initialization completed';
 }
 
@@ -243,6 +252,7 @@ function animate() {
         avgE.shift();
         stepArray.shift();
     }
+    
     stats.update();
 }
 
