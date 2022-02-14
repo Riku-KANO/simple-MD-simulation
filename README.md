@@ -5,7 +5,7 @@
 以下のリンクからデモを見ることができます。(WebGLがサポートされているブラウザにのみ対応。PC環境で確認してください。)  
 [Demo on my github page](https://riku-kano.github.io/simple-MD-simulation)
 
-<img src="https://github.com/Riku-KANO/simple-MD-simulation/asset/demo_shot.png">
+![demo img](https://github.com/Riku-KANO/simple-MD-simulation/blob/main/asset/demo_shot.png)
 
 ## 原理
 ### 速度ベルレ法
