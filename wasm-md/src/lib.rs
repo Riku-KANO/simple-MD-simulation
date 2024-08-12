@@ -1,4 +1,7 @@
+use rand::random;
 use wasm_bindgen::prelude::*;
+
+const PI: f32 = std::f32::consts::PI;
 
 #[wasm_bindgen]
 pub struct MolecularDynamics {
@@ -6,10 +9,14 @@ pub struct MolecularDynamics {
     a: f32,
     b: f32,
     c: f32,
+    nx: usize,
+    ny: usize,
+    nz: usize,
     width: f32,
     height: f32,
     depth: f32,
     m: f32,
+    temp: f32,
     delta_t: f32,
     rcut: f32,
     positions: Vec<f32>,
@@ -24,7 +31,19 @@ pub struct MolecularDynamics {
 
 #[wasm_bindgen]
 impl MolecularDynamics {
-    pub fn new(nx: usize, ny: usize, nz: usize, a: f32, b: f32, c: f32, m: f32, delta_t: f32, rcut: f32, is_connected: bool) -> Self {
+    pub fn new(
+        nx: usize,
+        ny: usize,
+        nz: usize,
+        a: f32,
+        b: f32,
+        c: f32,
+        m: f32,
+        temp: f32,
+        delta_t: f32,
+        rcut: f32,
+        is_connected: bool,
+    ) -> Self {
         let natom = nx * ny * nz;
         let positions = vec![0.0f32; 3 * natom];
         let velocities = vec![0.0f32; 3 * natom];
@@ -41,11 +60,15 @@ impl MolecularDynamics {
             a,
             b,
             c,
+            nx,
+            ny,
+            nz,
             width,
             height,
             depth,
             rcut,
             m,
+            temp,
             delta_t,
             positions,
             velocities,
@@ -68,6 +91,14 @@ impl MolecularDynamics {
 
     pub fn depth(&self) -> f32 {
         self.depth
+    }
+
+    pub fn natom(&self) -> usize {
+        self.natom
+    }
+
+    pub fn num_connected(&self) -> usize {
+        self.num_connected
     }
 
     pub fn positions(&self) -> *const f32 {
@@ -101,9 +132,15 @@ impl MolecularDynamics {
         let mut color_index = 0;
 
         for i in 0..self.natom {
-            self.positions[3 * i] += self.delta_t * (self.velocities[3 * i] + 0.5 * self.forces_before[3 * i] * self.delta_t / self.m);
-            self.positions[3 * i + 1] += self.delta_t * (self.velocities[3 * i + 1] + 0.5 * self.forces_before[3 * i + 1] * self.delta_t / self.m);
-            self.positions[3 * i + 2] += self.delta_t * (self.velocities[3 * i + 2] + 0.5 * self.forces_before[3 * i + 2] * self.delta_t / self.m);
+            self.positions[3 * i] += self.delta_t
+                * (self.velocities[3 * i]
+                    + 0.5 * self.forces_before[3 * i] * self.delta_t / self.m);
+            self.positions[3 * i + 1] += self.delta_t
+                * (self.velocities[3 * i + 1]
+                    + 0.5 * self.forces_before[3 * i + 1] * self.delta_t / self.m);
+            self.positions[3 * i + 2] += self.delta_t
+                * (self.velocities[3 * i + 2]
+                    + 0.5 * self.forces_before[3 * i + 2] * self.delta_t / self.m);
 
             if self.positions[3 * i] < 0.0 {
                 self.positions[3 * i] += self.width;
@@ -156,9 +193,12 @@ impl MolecularDynamics {
         self.calc_potential_energy(false);
 
         for i in 0..self.natom {
-            self.velocities[3 * i] += 0.5 * self.delta_t / self.m * (self.forces_before[3 * i] + self.forces_after[3 * i]);
-            self.velocities[3 * i + 1] += 0.5 * self.delta_t / self.m * (self.forces_before[3 * i + 1] + self.forces_after[3 * i + 1]);
-            self.velocities[3 * i + 2] += 0.5 * self.delta_t / self.m * (self.forces_before[3 * i + 2] + self.forces_after[3 * i + 2]);
+            self.velocities[3 * i] += 0.5 * self.delta_t / self.m
+                * (self.forces_before[3 * i] + self.forces_after[3 * i]);
+            self.velocities[3 * i + 1] += 0.5 * self.delta_t / self.m
+                * (self.forces_before[3 * i + 1] + self.forces_after[3 * i + 1]);
+            self.velocities[3 * i + 2] += 0.5 * self.delta_t / self.m
+                * (self.forces_before[3 * i + 2] + self.forces_after[3 * i + 2]);
         }
 
         // let pe = self.calc_potential_energy(false);
@@ -168,7 +208,6 @@ impl MolecularDynamics {
         // let temp = ke / self.natom as f32;
         // let density = self.natom as f32 / (self.width * self.height * self.depth);
         // let p = density * (2.0f32 * ke + 1.5 * w) / (3.0f32 * self.natom as f32);
-
     }
 
     #[allow(dead_code)]
@@ -187,19 +226,35 @@ impl MolecularDynamics {
     fn calc_potential_energy(&mut self, is_pre_force: bool) -> f32 {
         let mut pe = 0.0f32;
         let r2cut = self.rcut * self.rcut;
+        
+        if is_pre_force {
+            self.forces_before.fill(0.0f32);
+        } else {
+            self.forces_after.fill(0.0f32);
+        }
 
         for i in 0..self.natom {
-            for j in (i+1)..self.natom {
-                let dx: f32 = self.positions[3 * i] - self.positions[3 * j];
-                let dy: f32 = self.positions[3 * i + 1] - self.positions[3 * j + 1];
-                let dz: f32 = self.positions[3 * i + 2] - self.positions[3 * j + 2];
+            for j in (i + 1)..self.natom {
+                let mut dx: f32 = self.positions[3 * i] - self.positions[3 * j];
+                let mut dy: f32 = self.positions[3 * i + 1] - self.positions[3 * j + 1];
+                let mut dz: f32 = self.positions[3 * i + 2] - self.positions[3 * j + 2];
+
+                if dx.abs() > 0.5f32 * self.width {
+                    dx -= self.width * dx.signum();
+                }
+                if dy.abs() > 0.5f32 * self.height {
+                    dy -= self.height * dy.signum();
+                }
+                if dz.abs() > 0.5f32 * self.depth {
+                    dz -= self.depth * dz.signum();
+                }
 
                 let r2: f32 = dx * dx + dy * dy + dz * dz;
 
                 if r2 < r2cut {
                     let r2_inv = r2.recip();
                     let r6_inv = r2_inv * r2_inv * r2_inv;
-                    
+
                     let wij = 48.0f32 * (r6_inv - 0.5) * r6_inv;
                     let fijx = wij * r2_inv * dx;
                     let fijy = wij * r2_inv * dy;
@@ -227,8 +282,7 @@ impl MolecularDynamics {
         }
 
         pe
-    } 
-
+    }
 
     fn calc_force(&mut self, is_pre_force: bool) -> f32 {
         let r2cut = self.rcut * self.rcut;
@@ -247,13 +301,13 @@ impl MolecularDynamics {
                 let mut dz: f32 = self.positions[3 * i + 2] - self.positions[3 * j + 2];
 
                 if dx.abs() > 0.5 * self.width {
-                    dx -= self.a * dx.signum();
+                    dx -= self.width * dx.signum();
                 }
                 if dy.abs() > 0.5 * self.height {
-                    dy -= self.b * dy.signum();
+                    dy -= self.height * dy.signum();
                 }
                 if dz.abs() > 0.5 * self.depth {
-                    dz -= self.c * dz.signum();
+                    dz -= self.depth * dz.signum();
                 }
 
                 let mut r2: f32 = dx * dx + dy * dy + dz * dz;
@@ -263,10 +317,9 @@ impl MolecularDynamics {
                 }
 
                 if r2 < r2cut {
-                    
                     let r2_inv = r2.recip();
                     let r6_inv = r2_inv * r2_inv * r2_inv;
-                    
+
                     let wij = 48.0f32 * (r6_inv - 0.5) * r6_inv;
                     let fijx = wij * r2_inv * dx;
                     let fijy = wij * r2_inv * dy;
@@ -294,5 +347,47 @@ impl MolecularDynamics {
         }
 
         w
+    }
+
+    pub fn init_positions_periodic(&mut self) {
+        for i in 0..self.nx {
+            for j in 0..self.ny {
+                for k in 0..self.nz {
+                    self.positions[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i] =
+                        self.a * i as f32 * 3f32 / 2f32;
+                    self.positions[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i + 1] =
+                        self.b * j as f32 * 3f32 / 2f32;
+                    self.positions[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i + 2] =
+                        self.c * k as f32 * 3f32 / 2f32;
+                }
+            }
+        }
+    }
+
+    /**
+     * ボックスミュラー法による速度の初期化
+     */
+    pub fn init_velocities(&mut self) {
+        for i in 0..self.nx {
+            for j in 0..self.ny {
+                for k in 0..self.nz {
+                    let r1 = random::<f32>();
+                    let r2 = random::<f32>();
+                    let r3 = random::<f32>();
+                    let r4 = random::<f32>();
+                    let r5 = random::<f32>();
+                    let r6 = random::<f32>();
+                    self.velocities[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i] =
+                        (-2.0f32 * self.temp / self.m * r1.log10()).sqrt()
+                            * (2.0f32 * PI * r2).cos();
+                    self.velocities[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i + 1] =
+                        (-2.0f32 * self.temp / self.m * r3.log10()).sqrt()
+                            * (2.0f32 * PI * r4).cos();
+                    self.velocities[3 * k * self.nx * self.ny + 3 * j * self.nx + 3 * i + 2] =
+                        (-2.0f32 * self.temp / self.m * r5.log10()).sqrt()
+                            * (2.0f32 * PI * r6).cos();
+                }
+            }
+        }
     }
 }
