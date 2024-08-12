@@ -1,0 +1,23 @@
+{
+  "name": "simple-md-simulation",
+  "version": "1.0.0",
+  "description": "レナード・ジョーンズポテンシャルを相互作用とした速度ベルレ法によるシンプルなMDシミュレーション。JavaSciptライブラリ[Three.js](https://github.com/mrdoob/three.js)によってブラウザ上で分子シミュレーションをリアルタイムに3Dレンダリングします。",
+  "main": "main.js",
+  "scripts": {
+    "start": "webpack-dev-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.167.1",
+    "wasm-md": "file:./wasm-md/pkg"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^12.0.2",
+    "webpack": "^5.93.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4"
+  }
+}
