@@ -1,0 +1,20 @@
+{
+  "name": "wasm-md",
+  "type": "module",
+  "collaborators": [
+    "Rik-KANO"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "wasm_md_bg.wasm",
+    "wasm_md.js",
+    "wasm_md_bg.js",
+    "wasm_md.d.ts"
+  ],
+  "main": "wasm_md.js",
+  "types": "wasm_md.d.ts",
+  "sideEffects": [
+    "./wasm_md.js",
+    "./snippets/*"
+  ]
+}
